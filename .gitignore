@@ -1,0 +1,5 @@
+/gitstream
+/bin/
+*.jsonl
+*.test
+*.out
