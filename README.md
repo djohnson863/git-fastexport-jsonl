@@ -29,6 +29,14 @@ git fast-export --all -C /path/to/repo > repo.fastexport
 ./gitstream -in repo.fastexport -out repo.jsonl
 ```
 
+`-reverse` runs the conversion the other way, turning JSON Lines back into
+a fast-import stream that `git fast-import` can replay:
+
+```sh
+./gitstream -reverse -in repo.jsonl -out repo.fastexport
+git fast-import --force < repo.fastexport
+```
+
 Each line of the output is one JSON object with a `blob`, `commit`, or
 `reset` key, mirroring the corresponding fast-export command. For example, a
 commit line looks like:
@@ -45,9 +53,14 @@ in a text format without a separate encoding step.
 
 The parser currently understands `blob`, `commit`, and `reset` commands,
 which covers the bulk of what `git fast-export` emits for a typical
-history. `tag` and `cat-blob` aren't handled yet, and there's currently no
-reverse conversion (JSONL back into a fast-import stream) - see the roadmap
-in the issue tracker for what's planned next.
+history. `tag` and `cat-blob` aren't handled yet - see the roadmap in the
+issue tracker for what's planned next.
+
+Conversion back to fast-import format (`-reverse`) covers the same three
+commands. Unlike the forward direction, it doesn't hold memory flat: JSON
+has no way to stream a value's bytes incrementally, so each line is decoded
+whole before being written out, meaning one blob's worth of base64 sits in
+memory at a time rather than being copied through in fixed-size chunks.
 
 ## Why not just use `git log --format=...`?
 
