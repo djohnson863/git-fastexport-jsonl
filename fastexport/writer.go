@@ -27,6 +27,8 @@ func (w *Writer) WriteRecord(rec *Record) error {
 		return w.writeCommit(rec.Commit)
 	case rec.Reset != nil:
 		return w.writeReset(rec.Reset)
+	case rec.Tag != nil:
+		return w.writeTag(rec.Tag)
 	default:
 		return fmt.Errorf("fastexport: record has no command set")
 	}
@@ -107,6 +109,26 @@ func (w *Writer) writeReset(rs *Reset) error {
 		}
 	}
 	return nil
+}
+
+func (w *Writer) writeTag(t *Tag) error {
+	if _, err := fmt.Fprintf(w.w, "tag %s\n", t.Name); err != nil {
+		return err
+	}
+	if t.Mark != 0 {
+		if _, err := fmt.Fprintf(w.w, "mark :%d\n", t.Mark); err != nil {
+			return err
+		}
+	}
+	if _, err := fmt.Fprintf(w.w, "from %s\n", t.From); err != nil {
+		return err
+	}
+	if t.Tagger != nil {
+		if _, err := fmt.Fprintf(w.w, "tagger %s\n", formatIdentity(*t.Tagger)); err != nil {
+			return err
+		}
+	}
+	return w.writeData([]byte(t.Message))
 }
 
 // writeData writes a "data <len>" line followed by data itself and the

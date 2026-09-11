@@ -14,6 +14,7 @@ type Record struct {
 	Blob   *Blob   `json:"blob,omitempty"`
 	Commit *Commit `json:"commit,omitempty"`
 	Reset  *Reset  `json:"reset,omitempty"`
+	Tag    *Tag    `json:"tag,omitempty"`
 }
 
 // Blob is a `blob` command: file content addressed by mark instead of path.
@@ -61,4 +62,15 @@ type Commit struct {
 type Reset struct {
 	Ref  string `json:"ref"`
 	From string `json:"from,omitempty"`
+}
+
+// Tag is a `tag` command: an annotated tag object, pointing at the commit
+// (or other object) it was applied to. Lightweight tags don't produce their
+// own command; fast-export represents them as a Reset instead.
+type Tag struct {
+	Name    string    `json:"name"`
+	Mark    int       `json:"mark,omitempty"`
+	From    string    `json:"from"`
+	Tagger  *Identity `json:"tagger,omitempty"` // absent for tags created without a tagger identity
+	Message string    `json:"message"`
 }

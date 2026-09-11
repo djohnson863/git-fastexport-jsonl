@@ -37,9 +37,9 @@ a fast-import stream that `git fast-import` can replay:
 git fast-import --force < repo.fastexport
 ```
 
-Each line of the output is one JSON object with a `blob`, `commit`, or
-`reset` key, mirroring the corresponding fast-export command. For example, a
-commit line looks like:
+Each line of the output is one JSON object with a `blob`, `commit`,
+`reset`, or `tag` key, mirroring the corresponding fast-export command. For
+example, a commit line looks like:
 
 ```json
 {"commit":{"ref":"refs/heads/main","mark":3,"committer":{"name":"Jane Doe","email":"jane@example.com","when":"1690000000 -0700"},"message":"fix off-by-one in the retry loop\n","from":":2","fileChanges":[{"op":"M","mode":"100644","dataRef":":1","path":"retry.go"}]}}
@@ -51,12 +51,14 @@ in a text format without a separate encoding step.
 
 ## What's implemented
 
-The parser currently understands `blob`, `commit`, and `reset` commands,
-which covers the bulk of what `git fast-export` emits for a typical
-history. `tag` and `cat-blob` aren't handled yet - see the roadmap in the
-issue tracker for what's planned next.
+The parser understands `blob`, `commit`, `reset`, and `tag` commands, which
+covers everything `git fast-export` emits for a typical history, annotated
+tags included. `cat-blob` is deliberately not handled: it's a command
+fast-import accepts on its input to answer a caller's query mid-stream, not
+something fast-export ever produces, so there's no record of it to parse or
+re-emit here.
 
-Conversion back to fast-import format (`-reverse`) covers the same three
+Conversion back to fast-import format (`-reverse`) covers the same four
 commands. Unlike the forward direction, it doesn't hold memory flat: JSON
 has no way to stream a value's bytes incrementally, so each line is decoded
 whole before being written out, meaning one blob's worth of base64 sits in

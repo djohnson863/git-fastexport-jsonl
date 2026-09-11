@@ -58,6 +58,12 @@ func (r *Reader) Read() (*Record, error) {
 				return nil, err
 			}
 			return &Record{Reset: rs}, nil
+		case strings.HasPrefix(line, "tag "):
+			t, err := r.readTag(strings.TrimPrefix(line, "tag "))
+			if err != nil {
+				return nil, err
+			}
+			return &Record{Tag: t}, nil
 		default:
 			return nil, fmt.Errorf("fastexport: unsupported command: %q", line)
 		}
@@ -184,6 +190,44 @@ func (r *Reader) readReset(ref string) (*Reset, error) {
 	}
 	r.unreadLine(line)
 	return rs, nil
+}
+
+// readTag reads a `tag` command. Per git-fast-import(1) the lines appear in
+// a fixed order: an optional mark, then from, then an optional tagger, then
+// the data block holding the tag message.
+func (r *Reader) readTag(name string) (*Tag, error) {
+	t := &Tag{Name: name}
+	for {
+		line, err := r.nextLine()
+		if err != nil {
+			return nil, err
+		}
+		switch {
+		case strings.HasPrefix(line, "mark :"):
+			n, err := strconv.Atoi(strings.TrimPrefix(line, "mark :"))
+			if err != nil {
+				return nil, fmt.Errorf("fastexport: bad mark %q: %w", line, err)
+			}
+			t.Mark = n
+		case strings.HasPrefix(line, "from "):
+			t.From = strings.TrimPrefix(line, "from ")
+		case strings.HasPrefix(line, "tagger "):
+			id, err := parseIdentity(strings.TrimPrefix(line, "tagger "))
+			if err != nil {
+				return nil, err
+			}
+			t.Tagger = id
+		case strings.HasPrefix(line, "data "):
+			msg, err := r.readData(line)
+			if err != nil {
+				return nil, err
+			}
+			t.Message = string(msg)
+			return t, nil
+		default:
+			return nil, fmt.Errorf("fastexport: unexpected line in tag: %q", line)
+		}
+	}
 }
 
 // readData reads the payload of a "data <len>" line: exactly len bytes,
