@@ -262,24 +262,47 @@ func parseIdentity(s string) (*Identity, error) {
 	}, nil
 }
 
+// parseFileChange parses an M/D/C/R line. Paths may be given bare or, when
+// they contain a space, quote, backslash, or control character, as a
+// C-style quoted string (see unquotePath); either form can appear on the
+// same line as a plain one.
 func parseFileChange(line string) (FileChange, error) {
 	op := line[:1]
 	rest := line[2:]
 	switch op {
 	case "M":
-		fields := strings.SplitN(rest, " ", 3)
-		if len(fields) != 3 {
+		sp := strings.IndexByte(rest, ' ')
+		if sp < 0 {
 			return FileChange{}, fmt.Errorf("fastexport: malformed M line: %q", line)
 		}
-		return FileChange{Op: "M", Mode: fields[0], DataRef: fields[1], Path: fields[2]}, nil
-	case "D":
-		return FileChange{Op: "D", Path: rest}, nil
-	case "C", "R":
-		fields := strings.SplitN(rest, " ", 2)
-		if len(fields) != 2 {
-			return FileChange{}, fmt.Errorf("fastexport: malformed %s line: %q", op, line)
+		mode := rest[:sp]
+		rest = rest[sp+1:]
+		sp = strings.IndexByte(rest, ' ')
+		if sp < 0 {
+			return FileChange{}, fmt.Errorf("fastexport: malformed M line: %q", line)
 		}
-		return FileChange{Op: op, SrcPath: fields[0], Path: fields[1]}, nil
+		dataRef := rest[:sp]
+		path, err := unquotePath(rest[sp+1:])
+		if err != nil {
+			return FileChange{}, fmt.Errorf("fastexport: malformed M line %q: %w", line, err)
+		}
+		return FileChange{Op: "M", Mode: mode, DataRef: dataRef, Path: path}, nil
+	case "D":
+		path, err := unquotePath(rest)
+		if err != nil {
+			return FileChange{}, fmt.Errorf("fastexport: malformed D line %q: %w", line, err)
+		}
+		return FileChange{Op: "D", Path: path}, nil
+	case "C", "R":
+		src, remainder, err := readPathToken(rest)
+		if err != nil {
+			return FileChange{}, fmt.Errorf("fastexport: malformed %s line %q: %w", op, line, err)
+		}
+		dst, err := unquotePath(remainder)
+		if err != nil {
+			return FileChange{}, fmt.Errorf("fastexport: malformed %s line %q: %w", op, line, err)
+		}
+		return FileChange{Op: op, SrcPath: src, Path: dst}, nil
 	default:
 		return FileChange{}, fmt.Errorf("fastexport: unknown file-change op: %q", line)
 	}

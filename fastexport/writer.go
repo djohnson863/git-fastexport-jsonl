@@ -88,11 +88,11 @@ func (w *Writer) writeFileChange(fc FileChange) error {
 	var err error
 	switch fc.Op {
 	case "M":
-		_, err = fmt.Fprintf(w.w, "M %s %s %s\n", fc.Mode, fc.DataRef, fc.Path)
+		_, err = fmt.Fprintf(w.w, "M %s %s %s\n", fc.Mode, fc.DataRef, quotePath(fc.Path))
 	case "D":
-		_, err = fmt.Fprintf(w.w, "D %s\n", fc.Path)
+		_, err = fmt.Fprintf(w.w, "D %s\n", quotePath(fc.Path))
 	case "C", "R":
-		_, err = fmt.Fprintf(w.w, "%s %s %s\n", fc.Op, fc.SrcPath, fc.Path)
+		_, err = fmt.Fprintf(w.w, "%s %s %s\n", fc.Op, quotePath(fc.SrcPath), quotePath(fc.Path))
 	default:
 		return fmt.Errorf("fastexport: unknown file-change op: %q", fc.Op)
 	}
