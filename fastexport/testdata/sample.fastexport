@@ -1,0 +1,36 @@
+blob
+mark :1
+data 9
+line one
+
+blob
+mark :2
+data 9
+line two
+
+commit refs/heads/main
+mark :3
+committer Jane Doe <jane@example.com> 1690000000 -0700
+data 15
+initial commit
+
+M 100644 :1 hello.txt
+commit refs/heads/main
+mark :4
+author Jane Doe <jane@example.com> 1690000100 -0700
+committer Jane Doe <jane@example.com> 1690000100 -0700
+data 14
+second commit
+
+from :3
+M 100644 :2 hello.txt
+R hello.txt "sub dir/hello.txt"
+reset refs/heads/main
+from :4
+tag v1.0
+mark :5
+from :4
+tagger Jane Doe <jane@example.com> 1690000200 -0700
+data 12
+release 1.0
+
